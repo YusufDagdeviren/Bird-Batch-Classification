@@ -78,16 +78,23 @@ class ImageDataLoader:
             yield batch_images, batch_labels
 
     def train_model(self):
-        num_epochs = 10  # Uygulamanıza ve veri setinize göre bu değeri güncelleyebilirsiniz
+        num_epochs = 10
         random_forest_model = RandomForestClassifier()
+
         for epoch in range(num_epochs):
             for batch_images, batch_labels in self.data_generator(self.X_train, self.y_train):
                 # Görüntüleri düzleştirme işlemi
                 batch_size = batch_images.shape[0]
                 flattened_batch = batch_images.reshape((batch_size, -1))
                 # Modeli eğitin
-                print(flattened_batch)
                 random_forest_model.fit(flattened_batch, batch_labels)
+                print("Egitim")
+                # Her batch işlemi bittikten sonra self.current_index'i kontrol edin
+                if self.current_index == len(self.X_train):
+                    # Eğer veri seti tamamlandıysa, self.current_index'i sıfırlayın
+                    self.current_index = 0
+                    break
+
         return random_forest_model
 
     def evaluate_model(self, model):
@@ -111,7 +118,7 @@ data_path_parrot = os.path.join('data', 'parrot')
 
 data_path_pigeon = os.path.join('data', 'pigeon')
 
-image_data_loader = ImageDataLoader(data_paths=[data_path_parrot, data_path_pigeon], image_size=(128, 128),batch_size=1)
+image_data_loader = ImageDataLoader(data_paths=[data_path_parrot, data_path_pigeon], image_size=(128, 128),batch_size=32)
 model = image_data_loader.train_model()
 accuracy = image_data_loader.evaluate_model(model)
 print("Model Accuracy: ", accuracy)
