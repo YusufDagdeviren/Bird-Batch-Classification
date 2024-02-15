@@ -5,10 +5,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import shuffle
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 
-class ImageDataLoader:
+
+class BirdDetection:
     def __init__(self, data_paths, image_size=(128, 128), batch_size=32):
         self.data_paths = data_paths
         self.image_size = image_size
@@ -88,12 +89,12 @@ class ImageDataLoader:
                 flattened_batch = batch_images.reshape((batch_size, -1))
                 # Modeli eğitin
                 random_forest_model.fit(flattened_batch, batch_labels)
-                print("Egitim")
                 # Her batch işlemi bittikten sonra self.current_index'i kontrol edin
                 if self.current_index == len(self.X_train):
                     # Eğer veri seti tamamlandıysa, self.current_index'i sıfırlayın
                     self.current_index = 0
                     break
+            print(f"Egitimin: {epoch+1}/{num_epochs} kismi tamamlandi")
 
         return random_forest_model
 
@@ -101,6 +102,9 @@ class ImageDataLoader:
         num_test_batches = len(self.X_test)
         total_test_samples = num_test_batches * self.batch_size
         correct_pred = 0
+        all_predictions = np.array([])
+        all_labels = np.array([])
+
         for _ in range(num_test_batches):
             batch_images, batch_labels = next(self.data_generator(self.X_test, self.y_test))
             batch_size = batch_images.shape[0]
@@ -109,8 +113,17 @@ class ImageDataLoader:
             # Modeli değerlendir
             predictions = model.predict(flattened_batch)
             correct_pred += np.sum(predictions == batch_labels)
+
+            # Tahmin ve etiketleri birleştir
+            all_predictions = np.concatenate((all_predictions, predictions))
+            all_labels = np.concatenate((all_labels, batch_labels))
+
         accuracy = correct_pred / total_test_samples
-        return accuracy
+        precision = precision_score(all_labels, all_predictions, average='weighted')
+        recall = recall_score(all_labels, all_predictions, average='weighted')
+        f1 = f1_score(all_labels, all_predictions, average='weighted')
+
+        return accuracy, precision, recall, f1
 
 
 # Veri setlerinizin bulunduğu dizinler
@@ -118,7 +131,7 @@ data_path_parrot = os.path.join('data', 'parrot')
 
 data_path_pigeon = os.path.join('data', 'pigeon')
 
-image_data_loader = ImageDataLoader(data_paths=[data_path_parrot, data_path_pigeon], image_size=(128, 128),batch_size=32)
+image_data_loader = BirdDetection(data_paths=[data_path_parrot, data_path_pigeon], image_size=(128, 128),batch_size=32)
 model = image_data_loader.train_model()
-accuracy = image_data_loader.evaluate_model(model)
-print("Model Accuracy: ", accuracy)
+accuracy, precision, recall, f1 = image_data_loader.evaluate_model(model)
+print(f"Model Accuracy: {accuracy} Model Precision: {precision} Model Recall: {recall} Model F1 Score: {f1}")
